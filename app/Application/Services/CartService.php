@@ -46,6 +46,7 @@ class CartService implements CartServiceInterface
     }
     public function checkout(PaymentInterface $paymentMethod)
     {
+        // move validation to match clean architecture (domain layer)
         $validationErrors = [];
         foreach ($this->cart->products as $product) {
             $this->productService->checkProductStock($product->id, $product->quantity);
@@ -56,7 +57,6 @@ class CartService implements CartServiceInterface
         if (count($validationErrors) > 0) {
             throw new Exception('Some products are out of stock');
         }
-        // todo payment
         $order = $this->orderService->createOrder($this->cart);
         $paymentMethod->charge($order);
         $this->cartRepository->clearCart();

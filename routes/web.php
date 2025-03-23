@@ -8,10 +8,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// API Routes for our backend
-Route::prefix('api')->group(function () {
-    // Add your API routes here
-});
+include_once 'webApi.php';
 
 // Catch all routes and direct to Vue router
 Route::get('/{any}', function () {
