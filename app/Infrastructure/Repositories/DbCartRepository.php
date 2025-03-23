@@ -4,7 +4,7 @@ namespace App\Infrastructure\Repositories;
 
 use App\Infrastructure\Repositories\Interfaces\CartRepositoryInterface;
 use App\Infrastructure\Persistance\Models\Cart;
-
+use App\Domain\Entities\CartItemEntity;
 class DbCartRepository implements CartRepositoryInterface
 {
     public function getCart()
@@ -12,16 +12,18 @@ class DbCartRepository implements CartRepositoryInterface
         return Cart::where('user_id', auth()->user()->id)->first();
     }
 
-    public function addToCart($productId, $quantity)
+    public function addToCart(CartItemEntity $cartItemEntity) : CartItemEntity
     {
         $cart = $this->getCart();
-        $cart->products()->attach($productId, ['quantity' => $quantity]);
+        $cart->products()->attach($cartItemEntity->productId, ['quantity' => $cartItemEntity->quantity]);
+        $cartItemEntity->id = $cart->products()->where('product_id', $cartItemEntity->productId)->first()->pivot->id;
+        return $cartItemEntity;
     }
 
-    public function removeFromCart($productId)
+    public function removeFromCart(CartItemEntity $cartItemEntity)
     {
         $cart = $this->getCart();
-        $cart->products()->detach($productId);
+        $cart->products()->detach($cartItemEntity->productId);
     }
 
     public function clearCart()
