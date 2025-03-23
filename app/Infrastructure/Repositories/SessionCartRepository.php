@@ -3,7 +3,7 @@
 namespace App\Infrastructure\Repositories;
 
 use App\Infrastructure\Repositories\Interfaces\CartRepositoryInterface;
-
+use App\Domain\Entities\CartItemEntity;
 class SessionCartRepository implements CartRepositoryInterface
 {
     public function getCart()
@@ -11,18 +11,20 @@ class SessionCartRepository implements CartRepositoryInterface
         return session('cart', []);
     }
 
-    public function addToCart($productId, $quantity)
+    public function addToCart(CartItemEntity $cartItemEntity) : CartItemEntity
     {
         $cart = $this->getCart();
-        $cart[$productId] = $quantity;
+        $cart[$cartItemEntity->productId] = $cartItemEntity->quantity;
         session(['cart' => $cart]);
+        return $cartItemEntity;
     }
 
-    public function removeFromCart($productId)
+    public function removeFromCart(CartItemEntity $cartItemEntity) : CartItemEntity
     {
         $cart = $this->getCart();
-        unset($cart[$productId]);
+        unset($cart[$cartItemEntity->productId]);
         session(['cart' => $cart]);
+        return $cartItemEntity;
     }
 
     public function clearCart()

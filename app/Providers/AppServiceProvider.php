@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Auth;
+use App\Infrastructure\Repositories\Interfaces\CartRepositoryInterface;
+use App\Infrastructure\Repositories\DbCartRepository;
+use App\Infrastructure\Repositories\SessionCartRepository;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +15,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(CartRepositoryInterface::class, function ($app) {
+            if (Auth::check()) {
+                return $app->make(DbCartRepository::class); 
+            } else {
+                return $app->make(SessionCartRepository::class); 
+            }
+        });
     }
 
     /**
@@ -19,6 +29,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+
     }
 }

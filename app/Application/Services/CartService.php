@@ -2,13 +2,15 @@
 
 namespace App\Application\Services;
 
+use App\Application\DTO\CartDTO;
+use App\Application\DTO\CartItemDTO;
 use App\Application\Services\Interfaces\CartServiceInterface;
 use App\Application\Services\Interfaces\OrderServiceInterface;
 use App\Application\Services\Interfaces\ProductServiceInterface;
 use App\Infrastructure\Payment\Interfaces\PaymentInterface;
 use App\Infrastructure\Repositories\Interfaces\CartRepositoryInterface;
 use Exception;
- 
+use App\Domain\Entities\CartItemEntity;
 class CartService implements CartServiceInterface
 {
     protected $cart;
@@ -25,15 +27,19 @@ class CartService implements CartServiceInterface
         $this->orderService = $orderService;
         $this->cart = $this->cartRepository->getCart();
     }
-    public function addToCart($productId, $quantity)
+    public function addToCart(CartItemDTO $dto) : CartDTO
     {
-        $this->cartRepository->addToCart($productId, $quantity);
+        $cartItemEntity = CartItemEntity::fromDTO($dto);
+        $cartItemEntity = $this->cartRepository->addToCart($cartItemEntity);
         $this->cart = $this->cartRepository->getCart();
+        return CartDTO::fromEntity($this->cart);
     }
-    public function removeFromCart($productId)
+    public function removeFromCart(CartItemDTO $dto) : CartDTO
     {
-        $this->cartRepository->removeFromCart($productId);
+        $cartItemEntity = CartItemEntity::fromDTO($dto);
+        $this->cartRepository->removeFromCart($cartItemEntity);
         $this->cart = $this->cartRepository->getCart();
+        return CartDTO::fromEntity($this->cart);
     }
     public function clearCart()
     {
