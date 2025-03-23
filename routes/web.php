@@ -2,6 +2,22 @@
 
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
+
+// API Routes for our backend
+Route::prefix('api')->group(function () {
+    // Add your API routes here
+});
+
+// Catch all routes and direct to Vue router
+Route::get('/{any}', function () {
+    return view('app');
+})->where('any', '.*');
+
 Route::get('/', function () {
     return view('welcome');
 });
