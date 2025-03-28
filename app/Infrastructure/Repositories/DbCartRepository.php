@@ -5,30 +5,39 @@ namespace App\Infrastructure\Repositories;
 use App\Infrastructure\Repositories\Interfaces\CartRepositoryInterface;
 use App\Infrastructure\Persistance\Models\Cart;
 use App\Domain\Entities\CartItemEntity;
+use App\Domain\Entities\CartEntity;
 class DbCartRepository implements CartRepositoryInterface
 {
-    public function getCart()
+    public function getCart() : CartEntity
     {
-        return Cart::where('user_id', auth()->user()->id)->first();
+        $cart = Cart::where('user_id', auth()->user()->id)->first();
+        if (!$cart) {
+            $cart = Cart::create(['user_id' => auth()->user()->id]);
+        }
+        return CartEntity::fromModel($cart);
     }
 
     public function addToCart(CartItemEntity $cartItemEntity) : CartItemEntity
     {
         $cart = $this->getCart();
+        $cart = Cart::find($cart->id);
         $cart->products()->attach($cartItemEntity->productId, ['quantity' => $cartItemEntity->quantity]);
         $cartItemEntity->id = $cart->products()->where('product_id', $cartItemEntity->productId)->first()->pivot->id;
         return $cartItemEntity;
     }
 
-    public function removeFromCart(CartItemEntity $cartItemEntity)
+    public function removeFromCart(CartItemEntity $cartItemEntity) : bool
     {
         $cart = $this->getCart();
+        $cart = Cart::find($cart->id);
         $cart->products()->detach($cartItemEntity->productId);
+        return true;
     }
 
-    public function clearCart()
+    public function clearCart() : void
     {
         $cart = $this->getCart();
+        $cart = Cart::find($cart->id);
         $cart->products()->detach();
     }
 }
