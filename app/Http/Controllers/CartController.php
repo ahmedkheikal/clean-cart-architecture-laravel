@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Application\DTO\CartItemDTO;
 use Illuminate\Support\Facades\Validator;
+use App\Domain\Cart\Exceptions\OutOfStockException;
 class CartController extends Controller
 {
     private $cartService;
@@ -24,8 +25,9 @@ class CartController extends Controller
     public function show(): JsonResponse
     {
         return response()->json([
-            'data' => $this->cartService->getCart()
-        ]);
+            'data' => $this->cartService->getCart(), 
+            'message' => 'Cart retrieved successfully'
+        ], 200);
     }
 
     /**
@@ -45,7 +47,7 @@ class CartController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $itemDto = CartItemDTO::fromRequest($request->all());
+        $itemDto = CartItemDTO::fromRequest($request);
         $cartDto = $this->cartService->addToCart($itemDto);
         return response()->json([
             'data' => $cartDto,
@@ -68,10 +70,14 @@ class CartController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
         $paymentMethod = $request->payment_method;
-        $this->cartService->checkout($paymentMethod);
+        try {
+            $this->cartService->checkout($paymentMethod);
+        } catch (OutOfStockException $e) {
+            return response()->json(['errors' => $e->getMessage()], 422);
+        }
         return response()->json([
             'data' => $this->cartService->getCart(),
-            'message' => 'Checkout processed successfully'
+            'message' => 'Checkout processed successfully',
         ], 201);
     }
 } 
