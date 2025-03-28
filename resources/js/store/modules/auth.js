@@ -22,21 +22,45 @@ export default {
     actions: {
         async login({ commit }, credentials) {
             try {
-                // TODO: Implement actual API call
-                const response = await fetch('/api/login', {
+                // todo implement csrf token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
                     },
                     body: JSON.stringify(credentials)
                 });
                 const data = await response.json();
                 
-                commit('SET_USER', data.user);
-                commit('SET_TOKEN', data.token);
+                commit('SET_USER', data.data.user);
+                commit('SET_TOKEN', data.data.authorization.token);
                 return data;
             } catch (error) {
                 console.error('Login error:', error);
+                throw error;
+            }
+        },
+        async register({ commit }, credentials) {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify(credentials)
+                });
+                const data = await response.json();
+                
+                commit('SET_USER', data.data.user);
+                commit('SET_TOKEN', data.data.authorization.token);
+                return data;
+            } catch (error) {
+                console.error('Register error:', error);
                 throw error;
             }
         },

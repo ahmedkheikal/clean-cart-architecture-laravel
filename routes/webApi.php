@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api')->group(function () {
@@ -12,9 +14,10 @@ Route::prefix('api')->group(function () {
 
     // Authentication Resource
     Route::prefix('auth')->group(function () {
-        Route::post('/register', 'AuthController@register');
-        Route::post('/login', 'AuthController@login');
-        Route::post('/logout', 'AuthController@logout')->middleware('auth:api');
+        Route::get('/register', [RegisterController::class, 'register']);
+        Route::post('/register', [RegisterController::class, 'register']);
+        Route::post('/login', [LoginController::class, 'login']);
+        Route::post('/logout', [LogoutController::class, 'logout'])->middleware('auth:api');
     });
 
     // Product Resource
