@@ -11,30 +11,39 @@ use App\Infrastructure\Payment\Interfaces\PaymentInterface;
 use App\Infrastructure\Repositories\Interfaces\CartRepositoryInterface;
 use Exception;
 use App\Domain\Entities\CartItemEntity;
+use App\Domain\Entities\CartEntity;
+use App\Domain\Cart\Services\CartValidationService;
 class CartService implements CartServiceInterface
 {
+    /**
+     * Summary of cart
+     * @var CartEntity
+     */
     protected $cart;
     protected $productService;
     protected $cartRepository;
     protected $orderService;
+    protected $cartValidationService;
     public function __construct(
         ProductServiceInterface $productService,
         CartRepositoryInterface $cartRepository,
-        OrderServiceInterface $orderService
+        OrderServiceInterface $orderService,
+        CartValidationService $cartValidationService
     ) {
         $this->productService = $productService;
         $this->cartRepository = $cartRepository;
         $this->orderService = $orderService;
+        $this->cartValidationService = $cartValidationService;
         $this->cart = $this->cartRepository->getCart();
     }
-    public function addToCart(CartItemDTO $dto) : CartDTO
+    public function addToCart(CartItemDTO $dto): CartDTO
     {
         $cartItemEntity = CartItemEntity::fromDTO($dto);
         $cartItemEntity = $this->cartRepository->addToCart($cartItemEntity);
         $this->cart = $this->cartRepository->getCart();
         return CartDTO::fromEntity($this->cart);
     }
-    public function removeFromCart(CartItemDTO $dto) : CartDTO
+    public function removeFromCart(CartItemDTO $dto): CartDTO
     {
         $cartItemEntity = CartItemEntity::fromDTO($dto);
         $this->cartRepository->removeFromCart($cartItemEntity);
@@ -46,24 +55,15 @@ class CartService implements CartServiceInterface
         $this->cartRepository->clearCart();
         $this->cart = $this->cartRepository->getCart();
     }
-    public function getCart()
+    public function getCart(): CartDTO
     {
-        return $this->cart;
+        return CartDTO::fromEntity($this->cart);
     }
-    public function checkout(PaymentInterface $paymentMethod)
+    public function checkout(PaymentInterface $paymentMethod): int
     {
         // move validation to match clean architecture (domain layer)
-        $validationErrors = [];
-        foreach ($this->cart->products as $product) {
-            $this->productService->checkProductStock($product->id, $product->quantity);
-            if (!$this->productService->checkProductStock($product->id, $product->quantity)) {
-                $validationErrors[] = $product->id;
-            }
-        }
-        if (count($validationErrors) > 0) {
-            throw new Exception('Some products are out of stock');
-        }
-        $order = $this->orderService->createOrder($this->cart);
+        $this->cartValidationService->validateCart($this->cart);
+        $order = $this->orderService->createOrder(CartDTO::fromEntity($this->cart));
         $paymentMethod->charge($order);
         $this->cartRepository->clearCart();
         return $order->id;

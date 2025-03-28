@@ -9,7 +9,7 @@ interface CartServiceInterface
  {
     public function addToCart(CartItemDTO $dto) : CartDTO;
     public function removeFromCart(CartItemDTO $dto);
-    public function getCart();
+    public function getCart() : CartDTO;
     public function clearCart();
     public function checkout(PaymentInterface $paymentMethod);
  }
