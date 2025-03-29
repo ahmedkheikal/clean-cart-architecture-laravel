@@ -3,6 +3,7 @@
 namespace App\Domain\Entities;
 
 use App\Application\DTO\CartItemDTO;
+use App\Infrastructure\Persistance\Models\Product;
 class CartItemEntity extends Entity
 {
     public ?int $id;
@@ -24,9 +25,24 @@ class CartItemEntity extends Entity
     }
     public static function fromModel($model) : static
     {
-        if (!$model instanceof CartItem) {
-            throw new \InvalidArgumentException('Model must be an instance of CartItem');
+        if (!$model instanceof Product) {
+            throw new \InvalidArgumentException('Model must be an instance of Product');
         }
-        return new CartItemEntity($model->productId, $model->quantity, $model->id);
+        $quantity = $model->pivot->quantity;
+        return new CartItemEntity($model->id, $quantity);
+    }
+    public function toArray() : array
+    {
+        return [
+            'productId' => $this->productId,
+            'quantity' => $this->quantity
+        ];
+    }
+    public static function fromArray(array $array) : static
+    {
+        if (!array_key_exists('productId', $array) || !array_key_exists('quantity', $array)) {
+            throw new \InvalidArgumentException('Array must contain productId and quantity');
+        }
+        return new CartItemEntity($array['productId'], $array['quantity']);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Application\DTO;
 
+use App\Domain\Entities\CartItemEntity;
 use Illuminate\Http\Request;
 use App\Domain\Entities\Entity;
 class CartItemDTO extends DTO

@@ -102,8 +102,9 @@ export default {
                 if (!valid) return
 
                 this.loading = true
-                this.error = null
+                this.error = null;
 
+                
                 await this.$store.dispatch('auth/login', this.formData)
                 this.$router.push('/')
             } catch (error) {

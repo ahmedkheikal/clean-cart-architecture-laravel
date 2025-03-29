@@ -2,6 +2,8 @@
 
 namespace App\Application\Services;
 
+use App\Infrastructure\Repositories\SessionCartRepository;
+use App\Infrastructure\Repositories\DbCartRepository;
 use App\Application\DTO\CartDTO;
 use App\Application\DTO\CartItemDTO;
 use App\Application\Services\Interfaces\CartServiceInterface;
@@ -63,9 +65,19 @@ class CartService implements CartServiceInterface
     {
         // move validation to match clean architecture (domain layer)
         $this->cartValidationService->validateCart($this->cart);
-        $order = $this->orderService->createOrder(CartDTO::fromEntity($this->cart));
+        $order = $this->orderService->createOrder($this->cart);
         $paymentMethod->charge($order);
         $this->cartRepository->clearCart();
         return $order->id;
+    }
+
+    public function moveSessionCartToDatabaseCart()
+    {
+        $sessionCartRepo = app(SessionCartRepository::class);
+        $databaseCartRepo = app(DbCartRepository::class);
+        $sessionCart = $sessionCartRepo->getCart();
+        foreach ($sessionCart->items as $item) {
+            $databaseCartRepo->addToCart($item);
+        }
     }
 }

@@ -1,0 +1,706 @@
+diff --git a/app/Application/DTO/CartItemDTO.php b/app/Application/DTO/CartItemDTO.php
+index a86a5af..f56d4b2 100644
+--- a/app/Application/DTO/CartItemDTO.php
++++ b/app/Application/DTO/CartItemDTO.php
+@@ -2,6 +2,7 @@
+ 
+ namespace App\Application\DTO;
+ 
++use App\Domain\Entities\CartItemEntity;
+ use Illuminate\Http\Request;
+ use App\Domain\Entities\Entity;
+ class CartItemDTO extends DTO
+diff --git a/app/Application/Services/CartService.php b/app/Application/Services/CartService.php
+index 016ec40..b856c0a 100644
+--- a/app/Application/Services/CartService.php
++++ b/app/Application/Services/CartService.php
+@@ -2,6 +2,8 @@
+ 
+ namespace App\Application\Services;
+ 
++use App\Infrastructure\Repositories\SessionCartRepository;
++use App\Infrastructure\Repositories\DbCartRepository;
+ use App\Application\DTO\CartDTO;
+ use App\Application\DTO\CartItemDTO;
+ use App\Application\Services\Interfaces\CartServiceInterface;
+@@ -63,9 +65,19 @@ public function checkout(PaymentInterface $paymentMethod): int
+     {
+         // move validation to match clean architecture (domain layer)
+         $this->cartValidationService->validateCart($this->cart);
+-        $order = $this->orderService->createOrder(CartDTO::fromEntity($this->cart));
++        $order = $this->orderService->createOrder($this->cart);
+         $paymentMethod->charge($order);
+         $this->cartRepository->clearCart();
+         return $order->id;
+     }
++
++    public function moveSessionCartToDatabaseCart()
++    {
++        $sessionCartRepo = app(SessionCartRepository::class);
++        $databaseCartRepo = app(DbCartRepository::class);
++        $sessionCart = $sessionCartRepo->getCart();
++        foreach ($sessionCart->items as $item) {
++            $databaseCartRepo->addToCart($item);
++        }
++    }
+ }
+\ No newline at end of file
+diff --git a/app/Application/Services/Interfaces/CartServiceInterface.php b/app/Application/Services/Interfaces/CartServiceInterface.php
+index 0289863..159e4a7 100644
+--- a/app/Application/Services/Interfaces/CartServiceInterface.php
++++ b/app/Application/Services/Interfaces/CartServiceInterface.php
+@@ -12,4 +12,5 @@ public function removeFromCart(CartItemDTO $dto);
+     public function getCart() : CartDTO;
+     public function clearCart();
+     public function checkout(PaymentInterface $paymentMethod);
++    public function moveSessionCartToDatabaseCart();
+  }
+\ No newline at end of file
+diff --git a/app/Application/Services/Interfaces/OrderServiceInterface.php b/app/Application/Services/Interfaces/OrderServiceInterface.php
+index 6119181..cafee75 100644
+--- a/app/Application/Services/Interfaces/OrderServiceInterface.php
++++ b/app/Application/Services/Interfaces/OrderServiceInterface.php
+@@ -4,15 +4,12 @@
+ 
+ use App\Application\DTO\CartDTO;
+ use App\Domain\Entities\CartEntity;
++use App\Infrastructure\Persistance\Models\Order;
+ 
+ interface OrderServiceInterface
+ {
+     public function getOrderHistory();
+     public function getOrderById($id);
+     public function getOrderItems($orderId);
+-    public function getOrderTotal($orderId);
+-    public function getOrderStatus($orderId);
+-    public function getOrderDate($orderId);
+-    public function getOrderCustomer($orderId);
+-    public function createOrder(CartDTO $cart);
++    public function createOrder(CartEntity $cart) : Order;
+ }
+\ No newline at end of file
+diff --git a/app/Application/Services/Interfaces/ProductServiceInterface.php b/app/Application/Services/Interfaces/ProductServiceInterface.php
+index a2684d4..9f6bdd1 100644
+--- a/app/Application/Services/Interfaces/ProductServiceInterface.php
++++ b/app/Application/Services/Interfaces/ProductServiceInterface.php
+@@ -2,11 +2,26 @@
+ 
+ namespace App\Application\Services\Interfaces;
+ 
++use App\Application\DTO\ProductDTO;
++
+ interface ProductServiceInterface
+ {
+-    public function getAllProducts();
+-    public function getProductById($id);
+-    public function createProduct(array $data);
++    /**
++     * Get all products
++     * 
++     * @return ProductDTO[]
++     */
++    public function getAllProducts(): array;
++
++    /**
++     * Create a product
++     * 
++     * @param array $data
++     * @return ProductDTO
++     */
++    public function createProduct(array $data): ProductDTO;
++
++    public function getProductById($id): ProductDTO;
+     public function updateProduct(array $data, $id);
+     public function deleteProduct($id);
+     public function checkProductStock($productId, $quantity);
+diff --git a/app/Application/Services/ProductService.php b/app/Application/Services/ProductService.php
+index b1f3c40..a01531a 100644
+--- a/app/Application/Services/ProductService.php
++++ b/app/Application/Services/ProductService.php
+@@ -2,6 +2,7 @@
+ 
+ namespace App\Application\Services;
+ 
++use App\Application\DTO\ProductDTO;
+ use App\Application\Services\Interfaces\ProductServiceInterface;
+ use App\Infrastructure\Repositories\Interfaces\ProductRepositoryInterface;
+ 
+@@ -14,18 +15,23 @@ public function __construct(ProductRepositoryInterface $productRepository)
+         $this->productRepository = $productRepository;
+     }
+ 
+-    public function getAllProducts()
++    /**
++     * Get all products
++     * 
++     * @return ProductDTO[]
++     */
++    public function getAllProducts(): array
+     {
+         return $this->productRepository->getAllProducts();
+     }
+     
+  
+-    public function getProductById($id)
++    public function getProductById($id): ProductDTO
+     {
+         return $this->productRepository->getProductById($id);
+     }
+ 
+-    public function createProduct(array $data)
++    public function createProduct(array $data): ProductDTO
+     {
+         return $this->productRepository->createProduct($data);
+     }
+diff --git a/app/Domain/Entities/CartEntity.php b/app/Domain/Entities/CartEntity.php
+index 836fc43..22fad1f 100644
+--- a/app/Domain/Entities/CartEntity.php
++++ b/app/Domain/Entities/CartEntity.php
+@@ -9,46 +9,68 @@ class CartEntity extends Entity
+      * @var CartItemEntity[]
+      */
+     public array $items; // array of CartItemEntity
+-    public float $totalPrice;
+-    public int $totalQuantity;
+-    public int $id;
+-    public function __construct(array $items, float $totalPrice, int $totalQuantity, int $id = null)
++    public ?float $totalPrice; // nullable for newly created cart
++    public ?int $totalQuantity; // nullable for newly created cart
++    public ?int $id; // nullable for create cart entity
++    public function __construct(array $items, ?float $totalPrice, ?int $totalQuantity, ?int $id = null)
+     {
+-        $this->items = $items;
++        $this->items = $items; // if items are plain array of productIds, convert to CartItemEntity
++        if (is_array($items)) {
++            $this->setItemsFromArray($items);
++        }
+         $this->totalPrice = $totalPrice;
+         $this->totalQuantity = $totalQuantity;
+         $this->id = $id;
+     }
+-    public static function fromDTO($dto) : static
++    private function setItemsFromArray(array $items)
++    {
++        $this->items = [];
++        foreach ($items as $item) {
++            $this->items[] = CartItemEntity::fromArray($item);
++        }
++    }
++    public static function fromDTO($dto): static
+     {
+         if (!$dto instanceof CartDTO) {
+             throw new \InvalidArgumentException('DTO must be an instance of CartDTO');
+         }
+         return new CartEntity($dto->items, $dto->totalPrice, $dto->totalQuantity);
+     }
+-    public static function fromModel($model) : static
++    public static function fromModel($model): static
+     {
+         if (!$model instanceof Cart) {
+             throw new \InvalidArgumentException('Model must be an instance of Cart');
+         }
+         $items = [];
+         foreach ($model->products as $product) {
++            // pass 
+             $items[] = CartItemEntity::fromModel($product);
+         }
+         return new CartEntity($items, $model->totalPrice, $model->totalQuantity, $model->id);
+     }
+-    public function isValid() : bool
++    public function isValid(): bool
+     {
+         // validate stock of each item
+         foreach ($this->items as $item) {
+             if ($item->quantity <= 0) {
+                 return false;
+             }
+-        }   
++        }
+         return true;
+     }
+-    public function canCheckout() : bool
++    public function canCheckout(): bool
+     {
+         return $this->isValid() && $this->totalQuantity > 0;
+     }
++    public function toArray(): array
++    {
++        return [
++            'items' => array_map(function($item) {
++                return is_array($item) ? $item : $item->toArray();
++            }, $this->items),
++            'totalPrice' => $this->totalPrice,
++            'totalQuantity' => $this->totalQuantity,
++            'id' => $this->id,
++        ];
+     }
++}
+diff --git a/app/Domain/Entities/CartItemEntity.php b/app/Domain/Entities/CartItemEntity.php
+index 13e8bb7..b05e933 100644
+--- a/app/Domain/Entities/CartItemEntity.php
++++ b/app/Domain/Entities/CartItemEntity.php
+@@ -3,6 +3,7 @@
+ namespace App\Domain\Entities;
+ 
+ use App\Application\DTO\CartItemDTO;
++use App\Infrastructure\Persistance\Models\Product;
+ class CartItemEntity extends Entity
+ {
+     public ?int $id;
+@@ -24,9 +25,24 @@ public static function fromDTO($dto) : static
+     }
+     public static function fromModel($model) : static
+     {
+-        if (!$model instanceof CartItem) {
+-            throw new \InvalidArgumentException('Model must be an instance of CartItem');
++        if (!$model instanceof Product) {
++            throw new \InvalidArgumentException('Model must be an instance of Product');
+         }
+-        return new CartItemEntity($model->productId, $model->quantity, $model->id);
++        $quantity = $model->pivot->quantity;
++        return new CartItemEntity($model->id, $quantity);
++    }
++    public function toArray() : array
++    {
++        return [
++            'productId' => $this->productId,
++            'quantity' => $this->quantity
++        ];
++    }
++    public static function fromArray(array $array) : static
++    {
++        if (!array_key_exists('productId', $array) || !array_key_exists('quantity', $array)) {
++            throw new \InvalidArgumentException('Array must contain productId and quantity');
++        }
++        return new CartItemEntity($array['productId'], $array['quantity']);
+     }
+ }
+diff --git a/app/Http/Controllers/Auth/LoginController.php b/app/Http/Controllers/Auth/LoginController.php
+index 3acdd3b..2817b89 100644
+--- a/app/Http/Controllers/Auth/LoginController.php
++++ b/app/Http/Controllers/Auth/LoginController.php
+@@ -2,13 +2,14 @@
+ 
+ namespace App\Http\Controllers\Auth;
+ 
++use App\Application\Services\Interfaces\CartServiceInterface;
+ use App\Http\Controllers\Controller;
+ use Illuminate\Http\Request;
+ use Illuminate\Support\Facades\Auth;
+ 
+ class LoginController extends Controller
+ {
+-    public function login(Request $request)
++    public function login(Request $request, CartServiceInterface $cartService)
+     {
+         $credentials = $request->validate([
+             'email' => 'required|email',
+@@ -22,6 +23,8 @@ public function login(Request $request)
+             ], 401);
+         }
+ 
++        $cartService->moveSessionCartToDatabaseCart();
++
+         return response()->json([
+             'data' => [
+                 'user' => Auth::user(),
+diff --git a/app/Http/Controllers/Auth/RegisterController.php b/app/Http/Controllers/Auth/RegisterController.php
+index eac3d63..1ea69ff 100644
+--- a/app/Http/Controllers/Auth/RegisterController.php
++++ b/app/Http/Controllers/Auth/RegisterController.php
+@@ -2,37 +2,40 @@
+ 
+ namespace App\Http\Controllers\Auth;
+ 
++use App\Application\Services\Interfaces\CartServiceInterface;
+ use App\Http\Controllers\Controller;
+ use Illuminate\Http\Request;
+ use App\Models\User;
+ use Illuminate\Support\Facades\Hash;
+ use Illuminate\Support\Facades\Auth;
++use Validator;
+ 
+ class RegisterController extends Controller
+ {
+-    public function register(Request $request)
++    public function register(Request $request, CartServiceInterface $cartService)
+     {
+-        /**
+-         * email
+-         * firstName
+-         * lastName
+-         * password
+-         */
+-        $request->validate([
++        $validator = Validator::make($request->all(), [
+             'email' => 'required|string|email|max:255|unique:users',
+-            'firstName' => 'required|string|max:255',
+-            'lastName' => 'required|string|max:255',
++            'name' => 'required|string|max:255',
+             'password' => 'required|string|min:8',
+         ]);
++        if ($validator->fails()) {
++            return response()->json([
++                'message' => 'Validation failed',
++                'errors' => $validator->errors(),
++            ], 422);
++        }
+ 
+         $user = User::create([
+-            'name' => $request->firstName . ' ' . $request->lastName,
++            'name' => $request->name,
+             'email' => $request->email,
+             'password' => Hash::make($request->password),
+         ]);
+ 
+-        $token = Auth::login($user);
++        $token = Auth::attempt(['email' => $request->email, 'password' => $request->password]);
+ 
++        // move session cart to database cart
++        $cartService->moveSessionCartToDatabaseCart();
+         return response()->json([
+             'message' => 'User registered successfully',
+             'data' => [
+diff --git a/app/Http/Controllers/CartController.php b/app/Http/Controllers/CartController.php
+index a0ac18e..4efc5bb 100644
+--- a/app/Http/Controllers/CartController.php
++++ b/app/Http/Controllers/CartController.php
+@@ -80,4 +80,21 @@ public function checkout(Request $request): JsonResponse
+             'message' => 'Checkout processed successfully',
+         ], 201);
+     }
++
++    public function removeItem(Request $request, $itemId): JsonResponse
++    {
++        $validator = Validator::make($request->all(), [
++            'product_id' => 'required|exists:products,id', // product id 
++            'quantity' => 'required|numeric|min:0.01',
++        ]);
++        if ($validator->fails()) {
++            return response()->json(['errors' => $validator->errors()], 422);
++        }
++        $itemDto = CartItemDTO::fromRequest($request);
++        $this->cartService->removeFromCart($itemDto);
++        return response()->json([
++            'data' => $this->cartService->getCart(),
++            'message' => 'Item removed from cart successfully'
++        ], 200);
++    }
+ } 
+\ No newline at end of file
+diff --git a/app/Infrastructure/Persistance/Models/Product.php b/app/Infrastructure/Persistance/Models/Product.php
+index b48e8c6..764246c 100644
+--- a/app/Infrastructure/Persistance/Models/Product.php
++++ b/app/Infrastructure/Persistance/Models/Product.php
+@@ -7,4 +7,9 @@
+ class Product extends Model
+ {
+     protected $fillable = ['name', 'description', 'price'];
++
++    public function stockMovements()
++    {
++        return $this->hasMany(StockMovement::class);
++    }
+ }
+diff --git a/app/Infrastructure/Repositories/DbCartRepository.php b/app/Infrastructure/Repositories/DbCartRepository.php
+index cd9d6d4..82d3729 100644
+--- a/app/Infrastructure/Repositories/DbCartRepository.php
++++ b/app/Infrastructure/Repositories/DbCartRepository.php
+@@ -30,7 +30,8 @@ public function removeFromCart(CartItemEntity $cartItemEntity) : bool
+     {
+         $cart = $this->getCart();
+         $cart = Cart::find($cart->id);
+-        $cart->products()->detach($cartItemEntity->productId);
++        $cartItemId = $cart->products()->where('product_id', $cartItemEntity->productId)->first()->pivot->id;
++        $cart->products()->detach($cartItemId);
+         return true;
+     }
+ 
+diff --git a/app/Infrastructure/Repositories/SessionCartRepository.php b/app/Infrastructure/Repositories/SessionCartRepository.php
+index de69b10..83c7fd5 100644
+--- a/app/Infrastructure/Repositories/SessionCartRepository.php
++++ b/app/Infrastructure/Repositories/SessionCartRepository.php
+@@ -10,18 +10,18 @@ class SessionCartRepository implements CartRepositoryInterface
+     public function getCart() : CartEntity
+     {
+         $cart = session('cart', []);
+-        $items = [];
+-        foreach ($cart as $productId => $quantity) {
+-            $items[] = new CartItemEntity($productId, $quantity);
+-        }
+-        return new CartEntity($items, 0, count($items));
++        $items = $cart['items'] ?? [];
++        $totalPrice = $cart['totalPrice'] ?? 0;
++        $totalQuantity = $cart['totalQuantity'] ?? 0;
++        return new CartEntity($items, $totalPrice, $totalQuantity);
++
+     }
+ 
+     public function addToCart(CartItemEntity $cartItemEntity) : CartItemEntity
+     {
+         $cart = $this->getCart();
+         $cart->items[] = $cartItemEntity;
+-        session(['cart' => $cart]);
++        session(['cart' => $cart->toArray()]);
+         return $cartItemEntity;
+     }   
+ 
+@@ -31,7 +31,7 @@ public function removeFromCart(CartItemEntity $cartItemEntity) : bool
+         $cart->items = array_filter($cart->items, function($item) use ($cartItemEntity) {
+             return $item->productId !== $cartItemEntity->productId;
+         });
+-        session(['cart' => $cart]);
++        session(['cart' => $cart->toArray()]);
+         return true;
+     }
+ 
+diff --git a/app/Providers/AppServiceProvider.php b/app/Providers/AppServiceProvider.php
+index 1580cf4..a66f966 100644
+--- a/app/Providers/AppServiceProvider.php
++++ b/app/Providers/AppServiceProvider.php
+@@ -15,6 +15,7 @@ class AppServiceProvider extends ServiceProvider
+      */
+     public function register(): void
+     {
++        // Special case for cart repository as it depends on auth state
+         $this->app->singleton(CartRepositoryInterface::class, function ($app) {
+             if (Auth::check()) {
+                 return $app->make(DbCartRepository::class); 
+diff --git a/bootstrap/providers.php b/bootstrap/providers.php
+index f4ecddf..50f862e 100644
+--- a/bootstrap/providers.php
++++ b/bootstrap/providers.php
+@@ -3,4 +3,5 @@
+ return [
+     App\Providers\AppServiceProvider::class,
+     App\Providers\RouteServiceProvider::class,
++    App\Providers\BindingServiceProvider::class,
+ ];
+diff --git a/database/migrations/2025_03_22_100611_create_products_table.php b/database/migrations/2025_03_22_100611_create_products_table.php
+index 5af5d92..ac04d04 100644
+--- a/database/migrations/2025_03_22_100611_create_products_table.php
++++ b/database/migrations/2025_03_22_100611_create_products_table.php
+@@ -27,6 +27,7 @@ public function up(): void
+             $table->foreignId('product_id');
+             $table->integer('quantity');
+             $table->string('type'); // in, out, adjustment adjustment permission to admin only
++            $table->date('date')->default(DB::raw('CURRENT_DATE'));
+             $table->timestamps();
+         }); 
+     }
+diff --git a/database/seeders/DatabaseSeeder.php b/database/seeders/DatabaseSeeder.php
+index d01a0ef..bffbfba 100644
+--- a/database/seeders/DatabaseSeeder.php
++++ b/database/seeders/DatabaseSeeder.php
+@@ -19,5 +19,9 @@ public function run(): void
+             'name' => 'Test User',
+             'email' => 'test@example.com',
+         ]);
++
++        $this->call([
++            ProductSeeder::class,
++        ]);
+     }
+ }
+diff --git a/resources/js/store/modules/auth.js b/resources/js/store/modules/auth.js
+index 0e0c42f..3ce7dac 100644
+--- a/resources/js/store/modules/auth.js
++++ b/resources/js/store/modules/auth.js
+@@ -34,7 +34,11 @@ export default {
+                     body: JSON.stringify(credentials)
+                 });
+                 const data = await response.json();
+-                
++
++                if (response.status !== 200) {
++                    throw new Error(data.message);
++                }
++
+                 commit('SET_USER', data.data.user);
+                 commit('SET_TOKEN', data.data.authorization.token);
+                 return data;
+@@ -55,6 +59,14 @@ export default {
+                     body: JSON.stringify(credentials)
+                 });
+                 const data = await response.json();
++                if (response.status !== 200) {
++                    if (response.status === 422) {
++                        for (const element in data.errors) {
++                            throw new Error(data.errors[element]);  
++                        }
++                    }
++                    throw new Error(data.message);
++                }
+                 
+                 commit('SET_USER', data.data.user);
+                 commit('SET_TOKEN', data.data.authorization.token);
+diff --git a/resources/js/store/modules/cart.js b/resources/js/store/modules/cart.js
+index 6ea0916..8eaa163 100644
+--- a/resources/js/store/modules/cart.js
++++ b/resources/js/store/modules/cart.js
+@@ -4,7 +4,24 @@ export default {
+         items: JSON.parse(localStorage.getItem('cart')) || [],
+     },
+     mutations: {
+-        ADD_ITEM(state, item) {
++        async ADD_ITEM(state, item) {
++            const token = localStorage.getItem('token');
++            // request {product_id: item.id, quantity: item.quantity}
++            const response = await fetch('/api/carts/current/items', {
++                method: 'POST',
++                body: JSON.stringify({product_id: item.id, quantity: 1}),
++                headers: {
++                    'Content-Type': 'application/json',
++                    'Accept': 'application/json',
++                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
++                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
++                }
++            });
++            const data = await response.json();
++            if (response.status >= 300) {  
++                throw new Error(data.message);
++            }
++            
+             const existingItem = state.items.find(i => i.id === item.id);
+             if (existingItem) {
+                 existingItem.quantity += 1;
+@@ -13,7 +30,22 @@ export default {
+             }
+             localStorage.setItem('cart', JSON.stringify(state.items));
+         },
+-        REMOVE_ITEM(state, itemId) {
++        async REMOVE_ITEM(state, itemId) {
++            const token = localStorage.getItem('token'); 
++            const response = await fetch(`/api/carts/current/items/${itemId}`, {
++                method: 'DELETE',
++                body: JSON.stringify({product_id: itemId, quantity: 1}),
++                headers: {
++                    'Content-Type': 'application/json',
++                    'Accept': 'application/json',
++                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
++                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
++                }
++            });
++            const data = await response.json();
++            if (response.status >= 300) {  
++                throw new Error(data.message);
++            }
+             state.items = state.items.filter(item => item.id !== itemId);
+             localStorage.setItem('cart', JSON.stringify(state.items));
+         },
+diff --git a/resources/js/views/AccountSettings.vue b/resources/js/views/AccountSettings.vue
+index e11b5a0..567f9b1 100644
+--- a/resources/js/views/AccountSettings.vue
++++ b/resources/js/views/AccountSettings.vue
+@@ -109,10 +109,10 @@ export default {
+         return {
+             activeTab: 'profile',
+             profile: {
+-                firstName: '',
+-                lastName: '',
+-                email: '',
+-                phone: ''
++                firstName: this.$store.state.auth?.user?.name?.split(' ')?.[0] || '', 
++                lastName: this.$store.state.auth?.user?.name?.split(' ')?.[1] || '', 
++                email: this.$store.state.auth?.user?.email || '', 
++                phone: this.$store.state.auth?.user?.phone || '' 
+             },
+             security: {
+                 currentPassword: '',
+diff --git a/resources/js/views/Products.vue b/resources/js/views/Products.vue
+index 9ae3a5b..c58fcc8 100644
+--- a/resources/js/views/Products.vue
++++ b/resources/js/views/Products.vue
+@@ -73,7 +73,17 @@ export default {
+             ]
+         }
+     },
++    async mounted() {
++        await this.fetchProducts();
++    },
+     methods: {
++        async fetchProducts() {
++            const response = await fetch('/api/products');
++            
++            const data = await response.json();
++            this.products = data.data;
++            
++        },
+         addToCart(product) {
+             this.$store.dispatch('cart/addItem', product);
+         }
+diff --git a/resources/js/views/Signup.vue b/resources/js/views/Signup.vue
+index 129552c..b7423da 100644
+--- a/resources/js/views/Signup.vue
++++ b/resources/js/views/Signup.vue
+@@ -10,21 +10,11 @@
+                     <v-card-text>
+                         <v-form @submit.prevent="handleSignup" ref="form">
+                             <v-row>
+-                                <v-col cols="12" sm="6">
++                                <v-col cols="12">
+                                     <v-text-field
+-                                        v-model="formData.firstName"
++                                        v-model="formData.name"
+                                         :rules="[rules.required]"
+-                                        label="First Name"
+-                                        variant="outlined"
+-                                        required
+-                                    ></v-text-field>
+-                                </v-col>
+-
+-                                <v-col cols="12" sm="6">
+-                                    <v-text-field
+-                                        v-model="formData.lastName"
+-                                        :rules="[rules.required]"
+-                                        label="Last Name"
++                                        label="Name"
+                                         variant="outlined"
+                                         required
+                                     ></v-text-field>
+@@ -108,8 +98,7 @@ export default {
+     data() {
+         return {
+             formData: {
+-                firstName: '',
+-                lastName: '',
++                name: '',
+                 email: '',
+                 password: '',
+                 confirmPassword: '',
+diff --git a/routes/webApi.php b/routes/webApi.php
+index 3d7f0b3..49ffabc 100644
+--- a/routes/webApi.php
++++ b/routes/webApi.php
+@@ -1,15 +1,19 @@
+ <?php
+ 
+ use App\Http\Controllers\Auth\LoginController;
++use App\Http\Controllers\Auth\LogoutController;
+ use App\Http\Controllers\Auth\RegisterController;
++use App\Http\Controllers\ProductController;
++use App\Http\Controllers\CartController;
+ use Illuminate\Support\Facades\Route;
+ 
+ Route::prefix('api')->group(function () {
+     // Cart Resource
+     Route::prefix('carts')->group(function () {
+-        Route::get('/current', 'CartController@show');          // Get current cart
+-        Route::post('/current/items', 'CartController@addItem'); // Add item to cart
+-        Route::post('/current/checkout', 'CartController@checkout'); // Process checkout
++        Route::get('/current', [CartController::class, 'show']);          // Get current cart
++        Route::post('/current/items', [CartController::class, 'addItem']); // Add item to cart
++        Route::post('/current/checkout', [CartController::class, 'checkout']); // Process checkout
++        Route::delete('/current/items/{itemId}', [CartController::class, 'removeItem']); // Remove item from cart
+     });
+ 
+     // Authentication Resource
+@@ -21,7 +25,7 @@
+     });
+ 
+     // Product Resource
+-    Route::apiResource('products', 'ProductController')->only([
++    Route::apiResource('products', ProductController::class)->only([
+         'index',  // GET /products
+         'show'    // GET /products/{id}
+     ]);

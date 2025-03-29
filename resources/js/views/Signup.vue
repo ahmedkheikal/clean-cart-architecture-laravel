@@ -10,21 +10,11 @@
                     <v-card-text>
                         <v-form @submit.prevent="handleSignup" ref="form">
                             <v-row>
-                                <v-col cols="12" sm="6">
+                                <v-col cols="12">
                                     <v-text-field
-                                        v-model="formData.firstName"
+                                        v-model="formData.name"
                                         :rules="[rules.required]"
-                                        label="First Name"
-                                        variant="outlined"
-                                        required
-                                    ></v-text-field>
-                                </v-col>
-
-                                <v-col cols="12" sm="6">
-                                    <v-text-field
-                                        v-model="formData.lastName"
-                                        :rules="[rules.required]"
-                                        label="Last Name"
+                                        label="Name"
                                         variant="outlined"
                                         required
                                     ></v-text-field>
@@ -108,8 +98,7 @@ export default {
     data() {
         return {
             formData: {
-                firstName: '',
-                lastName: '',
+                name: '',
                 email: '',
                 password: '',
                 confirmPassword: '',

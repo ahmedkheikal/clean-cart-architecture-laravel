@@ -109,10 +109,10 @@ export default {
         return {
             activeTab: 'profile',
             profile: {
-                firstName: '',
-                lastName: '',
-                email: '',
-                phone: ''
+                firstName: this.$store.state.auth?.user?.name?.split(' ')?.[0] || '', 
+                lastName: this.$store.state.auth?.user?.name?.split(' ')?.[1] || '', 
+                email: this.$store.state.auth?.user?.email || '', 
+                phone: this.$store.state.auth?.user?.phone || '' 
             },
             security: {
                 currentPassword: '',

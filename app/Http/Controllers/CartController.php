@@ -80,4 +80,21 @@ class CartController extends Controller
             'message' => 'Checkout processed successfully',
         ], 201);
     }
+
+    public function removeItem(Request $request, $itemId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|exists:products,id', // product id 
+            'quantity' => 'required|numeric|min:0.01',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+        $itemDto = CartItemDTO::fromRequest($request);
+        $this->cartService->removeFromCart($itemDto);
+        return response()->json([
+            'data' => $this->cartService->getCart(),
+            'message' => 'Item removed from cart successfully'
+        ], 200);
+    }
 } 

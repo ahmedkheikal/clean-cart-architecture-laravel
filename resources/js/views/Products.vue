@@ -73,7 +73,17 @@ export default {
             ]
         }
     },
+    async mounted() {
+        await this.fetchProducts();
+    },
     methods: {
+        async fetchProducts() {
+            const response = await fetch('/api/products');
+            
+            const data = await response.json();
+            this.products = data.data;
+            
+        },
         addToCart(product) {
             this.$store.dispatch('cart/addItem', product);
         }

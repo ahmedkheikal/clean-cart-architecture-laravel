@@ -1,8 +1,9 @@
-// Fonts
-@import url('https://fonts.bunny.net/css?family=Nunito');
 
 // Variables
-@import 'variables';
+@use 'variables';
 
 // Vuetify
-@import 'vuetify/styles';
+@use 'vuetify/styles';
+
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
