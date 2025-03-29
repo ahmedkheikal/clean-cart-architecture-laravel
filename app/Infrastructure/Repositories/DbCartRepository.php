@@ -21,7 +21,13 @@ class DbCartRepository implements CartRepositoryInterface
     {
         $cart = $this->getCart();
         $cart = Cart::find($cart->id);
-        $cart->products()->attach($cartItemEntity->productId, ['quantity' => $cartItemEntity->quantity]);
+        $cartItem = $cart->products()->where('product_id', $cartItemEntity->productId)->first();
+        if ($cartItem) {
+            $cartItem->pivot->quantity += $cartItemEntity->quantity;
+            $cartItem->pivot->save();
+        } else {
+            $cart->products()->attach($cartItemEntity->productId, ['quantity' => $cartItemEntity->quantity]);
+        }
         $cartItemEntity->id = $cart->products()->where('product_id', $cartItemEntity->productId)->first()->pivot->id;
         return $cartItemEntity;
     }

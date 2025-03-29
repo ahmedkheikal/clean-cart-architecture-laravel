@@ -6,7 +6,6 @@ export default {
     mutations: {
         async ADD_ITEM(state, item) {
             const token = localStorage.getItem('token');
-            // request {product_id: item.id, quantity: item.quantity}
             const response = await fetch('/api/carts/current/items', {
                 method: 'POST',
                 body: JSON.stringify({product_id: item.id, quantity: 1}),
@@ -43,7 +42,7 @@ export default {
                 }
             });
             const data = await response.json();
-            if (response.status >= 300) {  
+            if (response.status >= 300) {
                 throw new Error(data.message);
             }
             state.items = state.items.filter(item => item.id !== itemId);

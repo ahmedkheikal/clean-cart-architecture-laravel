@@ -20,7 +20,15 @@ class SessionCartRepository implements CartRepositoryInterface
     public function addToCart(CartItemEntity $cartItemEntity) : CartItemEntity
     {
         $cart = $this->getCart();
-        $cart->items[] = $cartItemEntity;
+        $cartItem = array_filter($cart->items, callback: function($item) use ($cartItemEntity) {
+            return $item->productId === $cartItemEntity->productId;
+        });
+        $cartItem = array_pop($cartItem);
+        if ($cartItem) {
+            $cartItem->quantity += $cartItemEntity->quantity;
+        } else {
+            $cart->items[] = $cartItemEntity;
+        }
         session(['cart' => $cart->toArray()]);
         return $cartItemEntity;
     }   
