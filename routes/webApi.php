@@ -1,15 +1,19 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CartController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api')->group(function () {
     // Cart Resource
     Route::prefix('carts')->group(function () {
-        Route::get('/current', 'CartController@show');          // Get current cart
-        Route::post('/current/items', 'CartController@addItem'); // Add item to cart
-        Route::post('/current/checkout', 'CartController@checkout'); // Process checkout
+        Route::get('/current', [CartController::class, 'show']);          // Get current cart
+        Route::post('/current/items', [CartController::class, 'addItem']); // Add item to cart
+        Route::post('/current/checkout', [CartController::class, 'checkout']); // Process checkout
+        Route::delete('/current/items/{itemId}', [CartController::class, 'removeItem']); // Remove item from cart
     });
 
     // Authentication Resource
@@ -21,7 +25,7 @@ Route::prefix('api')->group(function () {
     });
 
     // Product Resource
-    Route::apiResource('products', 'ProductController')->only([
+    Route::apiResource('products', ProductController::class)->only([
         'index',  // GET /products
         'show'    // GET /products/{id}
     ]);

@@ -27,6 +27,7 @@ return new class extends Migration
             $table->foreignId('product_id');
             $table->integer('quantity');
             $table->string('type'); // in, out, adjustment adjustment permission to admin only
+            $table->date('date')->default(DB::raw('CURRENT_DATE'));
             $table->timestamps();
         }); 
     }

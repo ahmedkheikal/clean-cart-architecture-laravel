@@ -12,4 +12,5 @@ interface CartServiceInterface
     public function getCart() : CartDTO;
     public function clearCart();
     public function checkout(PaymentInterface $paymentMethod);
+    public function moveSessionCartToDatabaseCart();
  }

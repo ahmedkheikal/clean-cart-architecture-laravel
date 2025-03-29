@@ -10,18 +10,18 @@ class SessionCartRepository implements CartRepositoryInterface
     public function getCart() : CartEntity
     {
         $cart = session('cart', []);
-        $items = [];
-        foreach ($cart as $productId => $quantity) {
-            $items[] = new CartItemEntity($productId, $quantity);
-        }
-        return new CartEntity($items, 0, count($items));
+        $items = $cart['items'] ?? [];
+        $totalPrice = $cart['totalPrice'] ?? 0;
+        $totalQuantity = $cart['totalQuantity'] ?? 0;
+        return new CartEntity($items, $totalPrice, $totalQuantity);
+
     }
 
     public function addToCart(CartItemEntity $cartItemEntity) : CartItemEntity
     {
         $cart = $this->getCart();
         $cart->items[] = $cartItemEntity;
-        session(['cart' => $cart]);
+        session(['cart' => $cart->toArray()]);
         return $cartItemEntity;
     }   
 
@@ -31,7 +31,7 @@ class SessionCartRepository implements CartRepositoryInterface
         $cart->items = array_filter($cart->items, function($item) use ($cartItemEntity) {
             return $item->productId !== $cartItemEntity->productId;
         });
-        session(['cart' => $cart]);
+        session(['cart' => $cart->toArray()]);
         return true;
     }
 

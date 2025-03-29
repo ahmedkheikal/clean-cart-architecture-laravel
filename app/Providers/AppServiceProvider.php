@@ -15,6 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Special case for cart repository as it depends on auth state
         $this->app->singleton(CartRepositoryInterface::class, function ($app) {
             if (Auth::check()) {
                 return $app->make(DbCartRepository::class); 

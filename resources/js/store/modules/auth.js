@@ -34,7 +34,11 @@ export default {
                     body: JSON.stringify(credentials)
                 });
                 const data = await response.json();
-                
+
+                if (response.status !== 200) {
+                    throw new Error(data.message);
+                }
+
                 commit('SET_USER', data.data.user);
                 commit('SET_TOKEN', data.data.authorization.token);
                 return data;
@@ -55,6 +59,14 @@ export default {
                     body: JSON.stringify(credentials)
                 });
                 const data = await response.json();
+                if (response.status !== 200) {
+                    if (response.status === 422) {
+                        for (const element in data.errors) {
+                            throw new Error(data.errors[element]);  
+                        }
+                    }
+                    throw new Error(data.message);
+                }
                 
                 commit('SET_USER', data.data.user);
                 commit('SET_TOKEN', data.data.authorization.token);

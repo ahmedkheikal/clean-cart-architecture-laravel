@@ -30,7 +30,8 @@ class DbCartRepository implements CartRepositoryInterface
     {
         $cart = $this->getCart();
         $cart = Cart::find($cart->id);
-        $cart->products()->detach($cartItemEntity->productId);
+        $cartItemId = $cart->products()->where('product_id', $cartItemEntity->productId)->first()->pivot->id;
+        $cart->products()->detach($cartItemId);
         return true;
     }
 

@@ -4,7 +4,24 @@ export default {
         items: JSON.parse(localStorage.getItem('cart')) || [],
     },
     mutations: {
-        ADD_ITEM(state, item) {
+        async ADD_ITEM(state, item) {
+            const token = localStorage.getItem('token');
+            // request {product_id: item.id, quantity: item.quantity}
+            const response = await fetch('/api/carts/current/items', {
+                method: 'POST',
+                body: JSON.stringify({product_id: item.id, quantity: 1}),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
+            const data = await response.json();
+            if (response.status >= 300) {  
+                throw new Error(data.message);
+            }
+            
             const existingItem = state.items.find(i => i.id === item.id);
             if (existingItem) {
                 existingItem.quantity += 1;
@@ -13,7 +30,22 @@ export default {
             }
             localStorage.setItem('cart', JSON.stringify(state.items));
         },
-        REMOVE_ITEM(state, itemId) {
+        async REMOVE_ITEM(state, itemId) {
+            const token = localStorage.getItem('token'); 
+            const response = await fetch(`/api/carts/current/items/${itemId}`, {
+                method: 'DELETE',
+                body: JSON.stringify({product_id: itemId, quantity: 1}),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
+            const data = await response.json();
+            if (response.status >= 300) {  
+                throw new Error(data.message);
+            }
             state.items = state.items.filter(item => item.id !== itemId);
             localStorage.setItem('cart', JSON.stringify(state.items));
         },

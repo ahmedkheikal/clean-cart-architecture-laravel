@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Application\Services\Interfaces\CartServiceInterface;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
-    public function login(Request $request)
+    public function login(Request $request, CartServiceInterface $cartService)
     {
         $credentials = $request->validate([
             'email' => 'required|email',
@@ -21,6 +22,8 @@ class LoginController extends Controller
                 'data' => [],
             ], 401);
         }
+
+        $cartService->moveSessionCartToDatabaseCart();
 
         return response()->json([
             'data' => [

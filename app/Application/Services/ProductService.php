@@ -2,6 +2,7 @@
 
 namespace App\Application\Services;
 
+use App\Application\DTO\ProductDTO;
 use App\Application\Services\Interfaces\ProductServiceInterface;
 use App\Infrastructure\Repositories\Interfaces\ProductRepositoryInterface;
 
@@ -14,18 +15,23 @@ class ProductService implements ProductServiceInterface
         $this->productRepository = $productRepository;
     }
 
-    public function getAllProducts()
+    /**
+     * Get all products
+     * 
+     * @return ProductDTO[]
+     */
+    public function getAllProducts(): array
     {
         return $this->productRepository->getAllProducts();
     }
     
  
-    public function getProductById($id)
+    public function getProductById($id): ProductDTO
     {
         return $this->productRepository->getProductById($id);
     }
 
-    public function createProduct(array $data)
+    public function createProduct(array $data): ProductDTO
     {
         return $this->productRepository->createProduct($data);
     }
