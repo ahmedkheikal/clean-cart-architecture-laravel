@@ -1,13 +1,17 @@
 <template>
   <div class="order-confirmation max-w-4xl mx-auto p-6">
-    <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-        </svg>
+    <div class="text-center mb-8 flex flex-col items-center justify-center">
+      <div class="flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4 mx-auto">
+        <img src="https://openclipart.org/image/2400px/svg_to_png/19803/andrea-S-checkmark-on-circle-1.png" 
+             class="h-full w-full object-contain" style="max-height: 60vh; max-width: 80vw;"
+             alt="Checkmark">
       </div>
-      <h1 class="text-3xl font-bold text-gray-900">Thank You for Your Order!</h1>
-      <p class="text-gray-600 mt-2">Your order has been successfully placed.</p>
+
+    </div>
+    
+    <div class="text-center">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Thank You for Your Order!</h1>
+      <p class="text-gray-600">Your order has been successfully placed.</p>
     </div>
 
     <div v-if="lastOrder" class="bg-white rounded-lg shadow p-6 mb-6">
@@ -54,14 +58,10 @@
     </div>
 
     <div class="text-center">
-      <router-link 
-        to="/" 
-        class="inline-flex items-center text-indigo-600 hover:text-indigo-500"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-        </svg>
-        Continue Shopping
+      <router-link to="/products">
+        <v-btn color="primary" variant="text" block>
+          Continue Shopping
+        </v-btn>
       </router-link>
     </div>
   </div>

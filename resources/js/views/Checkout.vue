@@ -106,6 +106,7 @@
             size="large"
             block
             class="mb-4"
+            @click="handleCheckout"
           >
             <span v-if="processing">
               <v-progress-circular indeterminate size="20" width="2" color="white" class="mr-2"></v-progress-circular>
@@ -136,6 +137,22 @@ import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 
 export default {
+  // set cart from store
+  computed: {
+    cart() {
+      return this.$store.state.cart
+    },
+    cartTotal() {
+      return this.$store.getters['cart/cartTotal']
+    },
+    tax() {
+      return this.cartTotal * 0.1
+    },
+    total() {
+      // carttotal + tax
+      return this.cartTotal + this.tax
+    }
+  },
   name: 'Checkout',
   setup() {
     const store = useStore()
@@ -164,42 +181,40 @@ export default {
       cardNumber: '',
       expiryDate: '',
       cvv: ''
-    })
-
-    const handleCheckout = async () => {
-      processing.value = true
-      try {
-        // Here you would typically make an API call to process the payment
-        await store.dispatch('processCheckout', {
-          shippingInfo: shippingInfo.value,
-          paymentInfo: paymentInfo.value,
-          subtotal: cartTotal.value,
-          tax: tax.value,
-          total: total.value
-        })
-        
-        // Clear the cart after successful checkout
-        await store.dispatch('clearCart')
-        
-        // Redirect to order confirmation
-        router.push('/order-confirmation')
-      } catch (error) {
-        console.error('Checkout failed:', error)
-        // Handle error (show error message to user)
-      } finally {
-        processing.value = false
-      }
-    }
-
+    });
     return {
       cart,
       cartTotal,
       tax,
       total,
       shippingInfo,
-      paymentInfo,
-      processing,
-      handleCheckout
+    }
+  },
+  methods: {
+    async handleCheckout () {
+      this.processing = true
+
+      try {
+
+        await this.$store.dispatch('checkout/processCheckout', {
+          shippingInfo: this.shippingInfo,
+          paymentInfo: this.paymentInfo,
+          subtotal: this.cartTotal,
+          tax: this.tax,
+          total: this.total
+        })
+        
+        // Clear the cart after successful checkout
+        await this.$store.dispatch('cart/clearCart')
+        
+        // Redirect to order confirmation
+        this.$router.push('/order-confirmation')
+      } catch (error) {
+        console.error('Checkout failed:', error)
+        // Handle error (show error message to user)
+      } finally {
+        this.processing = false
+      }
     }
   }
 }

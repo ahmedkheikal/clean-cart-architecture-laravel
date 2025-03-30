@@ -67,7 +67,6 @@ class CartService implements CartServiceInterface
     }
     public function checkout(PaymentInterface $paymentMethod): int
     {
-        // move validation to match clean architecture (domain layer)
         $this->cartValidationService->validateCart($this->cart);
         $order = $this->orderService->createOrder($this->cart);
         $paymentMethod->charge($order);

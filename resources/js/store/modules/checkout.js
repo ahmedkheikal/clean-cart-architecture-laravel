@@ -1,5 +1,5 @@
-// Checkout store module
 export default {
+  namespaced: true,
   state: {
     checkoutStatus: null,
     error: null,
@@ -27,18 +27,22 @@ export default {
       commit('SET_PROCESSING', true)
       commit('SET_ERROR', null)
       
+      console.log('shippingInfo', shippingInfo);
+      
       try {
-        // Here you would integrate with your payment processing service
-        // This is a placeholder for the actual API call
-        const response = await fetch('/api/checkout', {
+        const token = localStorage.getItem('token')
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        const response = await fetch('/api/carts/current/checkout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            shipping: shippingInfo,
-            payment: paymentInfo,
-            total: orderTotal
+            shipping_info: shippingInfo,
+            payment_method: 'cash'
           })
         })
 
@@ -51,8 +55,7 @@ export default {
         commit('SET_LAST_ORDER', order)
         commit('SET_CHECKOUT_STATUS', 'success')
         
-        // Clear the cart after successful checkout
-        await dispatch('clearCart', null, { root: true })
+        await dispatch('cart/clearCart', null, { root: true })
         
         return order
       } catch (error) {
