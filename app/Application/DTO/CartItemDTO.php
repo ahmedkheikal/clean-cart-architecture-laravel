@@ -24,10 +24,11 @@ class CartItemDTO extends DTO
         return new self(
             productId: (int) $request->product_id,
             quantity: (float) $request->quantity,
-            productName: (string) $request->product_name,
+            productName: '',
             unitPrice: (float) $request->unit_price
         );
     }
+
     public static function fromArray(array $data): static
     {
         return new self(

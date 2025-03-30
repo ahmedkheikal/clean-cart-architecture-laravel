@@ -26,13 +26,15 @@ class CartItemEntity extends Entity
             throw new \InvalidArgumentException('Model must be an instance of Product');
         }
         $quantity = $model->pivot->quantity;
-        return new CartItemEntity($model->id, $quantity, $model->name, $model->price, $model->pivot->id);
+        return new CartItemEntity($model->id, $quantity, $model->name, $model->pivot->unit_price, $model->pivot->id);
     }
     public function toArray() : array
     {
         return [
             'productId' => $this->productId,
-            'quantity' => $this->quantity
+            'quantity' => $this->quantity,
+            'productName' => $this->productName,
+            'unitPrice' => $this->unitPrice
         ];
     }
     public static function fromArray(array $array) : static

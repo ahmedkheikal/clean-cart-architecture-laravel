@@ -16,6 +16,7 @@ class CartEntity extends Entity
     {
         $this->items = $items; // if items are plain array of productIds, convert to CartItemEntity
         if (is_array($items) && !empty($items) && is_array($items[0])) {
+      
             $this->setItemsFromArray($items);
         }
         $this->totalPrice = $totalPrice;
@@ -43,7 +44,6 @@ class CartEntity extends Entity
         }
         $items = [];
         foreach ($model->products as $product) {
-            // pass 
             $items[] = CartItemEntity::fromModel($product);
         }
         return new CartEntity($items, $model->totalPrice, $model->totalQuantity, $model->id);

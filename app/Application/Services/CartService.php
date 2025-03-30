@@ -62,6 +62,7 @@ class CartService implements CartServiceInterface
     }
     public function getCart(): CartDTO
     {
+        $this->cart = $this->cartRepository->getCart();
         return CartDTO::fromEntity($this->cart);
     }
     public function checkout(PaymentInterface $paymentMethod): int
