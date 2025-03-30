@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
 use Illuminate\Support\Facades\Route;
@@ -31,11 +32,11 @@ Route::prefix('api')->group(function () {
     ]);
 
     // Order Resource
-    Route::apiResource('orders', 'OrderController')
+    Route::apiResource('orders', OrderController::class)
         ->middleware('auth:api')
         ->only([
             'index',  // GET /orders
-            'show'    // GET /orders/{id}
+            'show',   // GET /orders/{id}
         ]);
 
     // Admin Resources

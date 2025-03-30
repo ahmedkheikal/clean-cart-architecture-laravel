@@ -5,6 +5,9 @@ import Orders from './views/Orders.vue';
 import AccountSettings from './views/AccountSettings.vue';
 import Login from './views/Login.vue';
 import Signup from './views/Signup.vue';
+import Checkout from './views/Checkout.vue';
+import OrderConfirmation from './views/OrderConfirmation.vue';
+import { createRouter, createWebHistory } from 'vue-router';
 
 export default [
     {
@@ -41,5 +44,28 @@ export default [
         path: '/signup',
         component: Signup,
         name: 'signup'
+    },
+    {
+        path: '/checkout',
+        name: 'checkout',
+        component: Checkout,
+        meta: {
+            requiresAuth: false
+        }
+    },
+    {
+        path: '/order-confirmation',
+        name: 'order-confirmation',
+        component: OrderConfirmation,
+        meta: {
+            requiresAuth: false
+        }
     }
-]; 
+];
+
+// const router = createRouter({
+//     history: createWebHistory(),
+//     routes
+// });
+
+// export default router; 
