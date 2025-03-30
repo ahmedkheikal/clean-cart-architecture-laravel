@@ -72,6 +72,9 @@
 
 <script>
 export default {
+    mounted() {
+        this.$store.dispatch('cart/fetchCart');
+    },
     computed: {
         cartItems() {
             return this.$store.getters['cart/cartItems'];
@@ -87,8 +90,9 @@ export default {
                 this.$store.dispatch('cart/updateQuantity', { itemId, quantity });
             }
         },
-        removeItem(itemId) {
-            this.$store.dispatch('cart/removeItem', itemId);
+        async removeItem(itemId) {
+            await this.$store.dispatch('cart/removeItem', itemId);
+            await this.$store.dispatch('cart/fetchCart');
         },
         checkout() {
             // TODO: Implement checkout logic

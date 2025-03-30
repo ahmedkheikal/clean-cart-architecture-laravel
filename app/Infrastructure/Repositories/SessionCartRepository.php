@@ -5,8 +5,14 @@ namespace App\Infrastructure\Repositories;
 use App\Domain\Entities\CartEntity;
 use App\Infrastructure\Repositories\Interfaces\CartRepositoryInterface;
 use App\Domain\Entities\CartItemEntity;
+use App\Application\Services\Interfaces\ProductServiceInterface;
 class SessionCartRepository implements CartRepositoryInterface
 {
+    private ProductServiceInterface $productService;
+    public function __construct(ProductServiceInterface $productService)
+    {
+        $this->productService = $productService;
+    }
     public function getCart() : CartEntity
     {
         $cart = session('cart', []);
@@ -20,7 +26,18 @@ class SessionCartRepository implements CartRepositoryInterface
     public function addToCart(CartItemEntity $cartItemEntity) : CartItemEntity
     {
         $cart = $this->getCart();
-        $cart->items[] = $cartItemEntity;
+        $cartItem = array_filter($cart->items, callback: function($item) use ($cartItemEntity) {
+            return $item->productId === $cartItemEntity->productId;
+        });
+        $cartItem = array_pop($cartItem);
+        $product = $this->productService->getProductById($cartItemEntity->productId);
+        $cartItemEntity->productName = $product->name;
+        $cartItemEntity->unitPrice = $product->price;
+        if ($cartItem) {
+            $cartItem->quantity += $cartItemEntity->quantity;
+        } else {
+            $cart->items[] = $cartItemEntity;
+        }
         session(['cart' => $cart->toArray()]);
         return $cartItemEntity;
     }   

@@ -21,7 +21,17 @@ class DbCartRepository implements CartRepositoryInterface
     {
         $cart = $this->getCart();
         $cart = Cart::find($cart->id);
-        $cart->products()->attach($cartItemEntity->productId, ['quantity' => $cartItemEntity->quantity]);
+        $cartItem = $cart->products()->where('product_id', $cartItemEntity->productId)->first();
+        if ($cartItem) {
+            $cartItem->pivot->quantity += $cartItemEntity->quantity;
+            $cartItem->pivot->unit_price = $cartItemEntity->unitPrice;
+            $cartItem->pivot->save();
+        } else {
+            $cart->products()->attach($cartItemEntity->productId, [
+                'quantity' => $cartItemEntity->quantity,
+                'unit_price' => $cartItemEntity->unitPrice
+            ]);
+        }
         $cartItemEntity->id = $cart->products()->where('product_id', $cartItemEntity->productId)->first()->pivot->id;
         return $cartItemEntity;
     }
@@ -30,8 +40,14 @@ class DbCartRepository implements CartRepositoryInterface
     {
         $cart = $this->getCart();
         $cart = Cart::find($cart->id);
-        $cartItemId = $cart->products()->where('product_id', $cartItemEntity->productId)->first()->pivot->id;
-        $cart->products()->detach($cartItemId);
+        // if quantity is 1, remove the item else decrease the quantity
+        $cartItem = $cart->products()->wherePivot('product_id', $cartItemEntity->productId)->first();
+        if ($cartItem->pivot->quantity == 1) {
+            $cart->products()->detach($cartItemEntity->productId);
+        } else {
+            $cartItem->pivot->quantity--;
+            $cartItem->pivot->save();
+        }
         return true;
     }
 

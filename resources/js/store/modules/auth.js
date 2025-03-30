@@ -1,16 +1,15 @@
 export default {
     namespaced: true,
     state: {
-        user: null,
-        isAuthenticated: false,
+        user: JSON.parse(localStorage.getItem('user')) || null,
+        isAuthenticated: localStorage.getItem('token') !== null,
         token: localStorage.getItem('token') || null
     },
     mutations: {
-        SET_USER(state, user) {
+        SET_USER(state, { user, token }) {            
             state.user = user;
+            localStorage.setItem('user', JSON.stringify(user));
             state.isAuthenticated = !!user;
-        },
-        SET_TOKEN(state, token) {
             state.token = token;
             if (token) {
                 localStorage.setItem('token', token);
@@ -38,9 +37,13 @@ export default {
                 if (response.status !== 200) {
                     throw new Error(data.message);
                 }
-
-                commit('SET_USER', data.data.user);
-                commit('SET_TOKEN', data.data.authorization.token);
+               
+                
+                commit('SET_USER', { 
+                    user: data.data.user, 
+                    token: data.data.authorization.token 
+                });
+                commit('cart/fetchCart', null, { root: true });
                 return data;
             } catch (error) {
                 console.error('Login error:', error);
@@ -68,8 +71,11 @@ export default {
                     throw new Error(data.message);
                 }
                 
-                commit('SET_USER', data.data.user);
-                commit('SET_TOKEN', data.data.authorization.token);
+                commit('SET_USER', { 
+                    user: data.data.user, 
+                    token: data.data.authorization.token 
+                });
+                commit('cart/fetchCart', null, { root: true });
                 return data;
             } catch (error) {
                 console.error('Register error:', error);
@@ -83,8 +89,7 @@ export default {
                     method: 'POST'
                 });
                 
-                commit('SET_USER', null);
-                commit('SET_TOKEN', null);
+                commit('SET_USER', { user: null, token: null });
             } catch (error) {
                 console.error('Logout error:', error);
                 throw error;

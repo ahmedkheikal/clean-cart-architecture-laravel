@@ -6,7 +6,6 @@ export default {
     mutations: {
         async ADD_ITEM(state, item) {
             const token = localStorage.getItem('token');
-            // request {product_id: item.id, quantity: item.quantity}
             const response = await fetch('/api/carts/current/items', {
                 method: 'POST',
                 body: JSON.stringify({product_id: item.id, quantity: 1}),
@@ -26,6 +25,8 @@ export default {
             if (existingItem) {
                 existingItem.quantity += 1;
             } else {
+                console.log({ ...item, quantity: 1 });
+                
                 state.items.push({ ...item, quantity: 1 });
             }
             localStorage.setItem('cart', JSON.stringify(state.items));
@@ -43,11 +44,9 @@ export default {
                 }
             });
             const data = await response.json();
-            if (response.status >= 300) {  
+            if (response.status >= 300) {
                 throw new Error(data.message);
             }
-            state.items = state.items.filter(item => item.id !== itemId);
-            localStorage.setItem('cart', JSON.stringify(state.items));
         },
         UPDATE_QUANTITY(state, { itemId, quantity }) {
             const item = state.items.find(i => i.id === itemId);
@@ -59,6 +58,10 @@ export default {
         CLEAR_CART(state) {
             state.items = [];
             localStorage.removeItem('cart');
+        }, 
+        SET_CART(state, cart) {
+            state.items = cart;
+            localStorage.setItem('cart', JSON.stringify(state.items));
         }
     },
     actions: {
@@ -73,6 +76,34 @@ export default {
         },
         clearCart({ commit }) {
             commit('CLEAR_CART');
+        }, 
+        async fetchCart({ commit }) {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/carts/current', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
+            const data = await response.json();
+            if (response.status >= 300) {
+                throw new Error(data.message);
+            }
+            const mappedData = data.data.items.map(item => ({
+                id: item.productId,
+                name: item.productName,
+                quantity: item.quantity,
+                price: item.unitPrice,
+                description: item.description ?? '',
+                image: item.image ?? '',
+                stock_balance: item.stock_balance ?? 0,
+                created_at: item.created_at ?? '',
+                updated_at: item.updated_at ?? '',
+            }));
+            console.log(mappedData);
+            
+            commit('SET_CART', mappedData);
         }
     },
     getters: {

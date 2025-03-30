@@ -22,8 +22,8 @@ class OrderService implements OrderServiceInterface
             $orderItem = OrderItem::create([
                 'product_id' => $item->productId,
                 'quantity' => $item->quantity,
-                'unit_price' => $item->price,
-                'total_price' => $item->price * $item->quantity
+                'unit_price' => $item->unitPrice,
+                'total_price' => $item->unitPrice * $item->quantity
             ]);
             $order->items()->attach($orderItem);
         }

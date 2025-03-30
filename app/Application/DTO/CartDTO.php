@@ -21,7 +21,7 @@ class CartDTO extends DTO
     {
         $items = [];
         foreach ($data['items'] as $item) {
-            $items[] = new CartItemDTO($item['productId'], $item['quantity']);
+            $items[] = new CartItemDTO($item['productId'], $item['quantity'], $item['productName'], $item['unitPrice']);
         }
         return new CartDTO($items, $data['totalPrice'], $data['totalQuantity']);
     }

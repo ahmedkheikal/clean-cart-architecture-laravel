@@ -47,7 +47,7 @@ class CartController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $itemDto = CartItemDTO::fromRequest($request);
+        $itemDto = CartItemDTO::fromRequest(request: $request);
         $cartDto = $this->cartService->addToCart($itemDto);
         return response()->json([
             'data' => $cartDto,
