@@ -25,6 +25,8 @@ export default {
             if (existingItem) {
                 existingItem.quantity += 1;
             } else {
+                console.log({ ...item, quantity: 1 });
+                
                 state.items.push({ ...item, quantity: 1 });
             }
             localStorage.setItem('cart', JSON.stringify(state.items));
@@ -45,8 +47,6 @@ export default {
             if (response.status >= 300) {
                 throw new Error(data.message);
             }
-            state.items = state.items.filter(item => item.id !== itemId);
-            localStorage.setItem('cart', JSON.stringify(state.items));
         },
         UPDATE_QUANTITY(state, { itemId, quantity }) {
             const item = state.items.find(i => i.id === itemId);
@@ -60,7 +60,7 @@ export default {
             localStorage.removeItem('cart');
         }, 
         SET_CART(state, cart) {
-            state.items = cart.items;
+            state.items = cart;
             localStorage.setItem('cart', JSON.stringify(state.items));
         }
     },
@@ -90,9 +90,20 @@ export default {
             if (response.status >= 300) {
                 throw new Error(data.message);
             }
-            console.log(data.data);
+            const mappedData = data.data.items.map(item => ({
+                id: item.productId,
+                name: item.productName,
+                quantity: item.quantity,
+                price: item.unitPrice,
+                description: item.description ?? '',
+                image: item.image ?? '',
+                stock_balance: item.stock_balance ?? 0,
+                created_at: item.created_at ?? '',
+                updated_at: item.updated_at ?? '',
+            }));
+            console.log(mappedData);
             
-            commit('SET_CART', data.data);
+            commit('SET_CART', mappedData);
         }
     },
     getters: {

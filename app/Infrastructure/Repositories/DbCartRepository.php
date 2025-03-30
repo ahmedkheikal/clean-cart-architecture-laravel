@@ -40,7 +40,14 @@ class DbCartRepository implements CartRepositoryInterface
     {
         $cart = $this->getCart();
         $cart = Cart::find($cart->id);
-        $cart->products()->wherePivot('product_id', $cartItemEntity->productId)->detach();
+        // if quantity is 1, remove the item else decrease the quantity
+        $cartItem = $cart->products()->wherePivot('product_id', $cartItemEntity->productId)->first();
+        if ($cartItem->pivot->quantity == 1) {
+            $cart->products()->detach($cartItemEntity->productId);
+        } else {
+            $cartItem->pivot->quantity--;
+            $cartItem->pivot->save();
+        }
         return true;
     }
 
