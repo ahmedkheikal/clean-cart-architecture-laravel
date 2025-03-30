@@ -58,6 +58,10 @@ export default {
         CLEAR_CART(state) {
             state.items = [];
             localStorage.removeItem('cart');
+        }, 
+        SET_CART(state, cart) {
+            state.items = cart.items;
+            localStorage.setItem('cart', JSON.stringify(state.items));
         }
     },
     actions: {
@@ -72,6 +76,23 @@ export default {
         },
         clearCart({ commit }) {
             commit('CLEAR_CART');
+        }, 
+        async fetchCart({ commit }) {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/carts/current', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
+            const data = await response.json();
+            if (response.status >= 300) {
+                throw new Error(data.message);
+            }
+            console.log(data.data);
+            
+            commit('SET_CART', data.data);
         }
     },
     getters: {

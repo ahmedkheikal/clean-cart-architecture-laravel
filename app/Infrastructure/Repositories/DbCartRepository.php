@@ -24,9 +24,13 @@ class DbCartRepository implements CartRepositoryInterface
         $cartItem = $cart->products()->where('product_id', $cartItemEntity->productId)->first();
         if ($cartItem) {
             $cartItem->pivot->quantity += $cartItemEntity->quantity;
+            $cartItem->pivot->unit_price = $cartItemEntity->unitPrice;
             $cartItem->pivot->save();
         } else {
-            $cart->products()->attach($cartItemEntity->productId, ['quantity' => $cartItemEntity->quantity]);
+            $cart->products()->attach($cartItemEntity->productId, [
+                'quantity' => $cartItemEntity->quantity,
+                'unit_price' => $cartItemEntity->unitPrice
+            ]);
         }
         $cartItemEntity->id = $cart->products()->where('product_id', $cartItemEntity->productId)->first()->pivot->id;
         return $cartItemEntity;

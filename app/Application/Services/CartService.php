@@ -40,7 +40,10 @@ class CartService implements CartServiceInterface
     }
     public function addToCart(CartItemDTO $dto): CartDTO
     {
+        $product = $this->productService->getProductById($dto->productId);
         $cartItemEntity = CartItemEntity::fromDTO($dto);
+        $cartItemEntity->unitPrice = $product->price;
+        $cartItemEntity->productName = $product->name;
         $cartItemEntity = $this->cartRepository->addToCart($cartItemEntity);
         $this->cart = $this->cartRepository->getCart();
         return CartDTO::fromEntity($this->cart);

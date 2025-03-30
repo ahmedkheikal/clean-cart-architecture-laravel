@@ -41,6 +41,7 @@ export default {
 
                 commit('SET_USER', data.data.user);
                 commit('SET_TOKEN', data.data.authorization.token);
+                commit('fetchCart');
                 return data;
             } catch (error) {
                 console.error('Login error:', error);
