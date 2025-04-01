@@ -2,11 +2,11 @@
 
 namespace App\Infrastructure\Payment;
 
-use App\Infrastructure\Payment\Interfaces\PaymentInterface;
+use App\Infrastructure\Payment\Interfaces\PaymentMethodInterface;
 use App\Infrastructure\Persistance\Models\Order;
 use App\Infrastructure\Persistance\Models\Payment;
 
-class CashPayment implements PaymentInterface
+class CashPayment implements PaymentMethodInterface
 {
     public function charge(Order $order)
     {

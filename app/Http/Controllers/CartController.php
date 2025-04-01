@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Application\Services\Interfaces\CartServiceInterface;
+use App\Infrastructure\Payment\PaymentFactory;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Application\DTO\CartItemDTO;
@@ -64,12 +65,12 @@ class CartController extends Controller
     public function checkout(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'payment_method' => 'required|string',
+            'payment_method' => 'required|string|in:cash,stripe',
         ]);
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-        $paymentMethod = $request->payment_method;
+        $paymentMethod = PaymentFactory::createPaymentMethod($request->payment_method);
         try {
             $this->cartService->checkout($paymentMethod);
         } catch (OutOfStockException $e) {

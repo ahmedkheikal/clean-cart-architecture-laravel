@@ -4,7 +4,7 @@ namespace App\Infrastructure\Payment\Interfaces;
 
 use App\Infrastructure\Persistance\Models\Order;
 
-interface PaymentInterface
+interface PaymentMethodInterface
 {
     public function charge(Order $order);
     public function refund(Order $order);

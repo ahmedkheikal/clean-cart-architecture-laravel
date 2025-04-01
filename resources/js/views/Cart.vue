@@ -95,8 +95,8 @@ export default {
             await this.$store.dispatch('cart/fetchCart');
         },
         checkout() {
-            // TODO: Implement checkout logic
-            console.log('Proceeding to checkout...');
+            this.$router.push('/checkout');
+            this.$store.dispatch('checkout/processCheckout');
         }
     }
 }
