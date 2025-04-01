@@ -16,6 +16,7 @@ class OrderService implements OrderServiceInterface
         $cartInsert->id = null;
         $cartInsert = $cartInsert->toArray();
         unset($cartInsert['items']);
+        $cartInsert['user_id'] = auth()->user()->id;
         $order = Order::create($cartInsert);
         // items 
         foreach ($cart->items as $item) {

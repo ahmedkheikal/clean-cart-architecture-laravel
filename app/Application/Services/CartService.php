@@ -2,6 +2,7 @@
 
 namespace App\Application\Services;
 
+use App\Infrastructure\Payment\Interfaces\PaymentMethodInterface;
 use App\Infrastructure\Repositories\SessionCartRepository;
 use App\Infrastructure\Repositories\DbCartRepository;
 use App\Application\DTO\CartDTO;
@@ -9,9 +10,7 @@ use App\Application\DTO\CartItemDTO;
 use App\Application\Services\Interfaces\CartServiceInterface;
 use App\Application\Services\Interfaces\OrderServiceInterface;
 use App\Application\Services\Interfaces\ProductServiceInterface;
-use App\Infrastructure\Payment\Interfaces\PaymentInterface;
 use App\Infrastructure\Repositories\Interfaces\CartRepositoryInterface;
-use Exception;
 use App\Domain\Entities\CartItemEntity;
 use App\Domain\Entities\CartEntity;
 use App\Domain\Cart\Services\CartValidationService;
@@ -65,7 +64,7 @@ class CartService implements CartServiceInterface
         $this->cart = $this->cartRepository->getCart();
         return CartDTO::fromEntity($this->cart);
     }
-    public function checkout(PaymentInterface $paymentMethod): int
+    public function checkout(PaymentMethodInterface $paymentMethod): int
     {
         $this->cartValidationService->validateCart($this->cart);
         $order = $this->orderService->createOrder($this->cart);

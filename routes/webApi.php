@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('api')->group(function () {
     // Cart Resource
-    Route::prefix('carts')->group(function () {
+    Route::prefix('carts')->middleware('auth:api')->group(function () {     
         Route::get('/current', [CartController::class, 'show']);          // Get current cart
         Route::post('/current/items', [CartController::class, 'addItem']); // Add item to cart
         Route::post('/current/checkout', [CartController::class, 'checkout']); // Process checkout
